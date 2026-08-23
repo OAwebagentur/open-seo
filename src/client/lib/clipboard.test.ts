@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { copyTableToClipboard } from "./clipboard";
+import { copyTableToClipboard, copyTextToClipboard } from "./clipboard";
 
 type WrittenItem = {
   plain: string;
@@ -105,6 +105,37 @@ describe("copyTableToClipboard", () => {
   it("throws when the Clipboard API is unavailable", async () => {
     vi.stubGlobal("navigator", {});
     await expect(copyTableToClipboard(["X"], [["y"]])).rejects.toThrow(
+      /Clipboard API not available/,
+    );
+  });
+});
+
+describe("copyTextToClipboard", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("writes the text verbatim", async () => {
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    const json = JSON.stringify([{ url: "https://example.com" }], null, 2);
+    await copyTextToClipboard(json);
+    expect(writeText).toHaveBeenCalledWith(json);
+  });
+
+  it("throws when the Clipboard API is unavailable", async () => {
+    vi.stubGlobal("navigator", {});
+    await expect(copyTextToClipboard("x")).rejects.toThrow(
+      /Clipboard API not available/,
+    );
+  });
+
+  it("throws when only the richer write() exists", async () => {
+    vi.stubGlobal("navigator", { clipboard: { write: vi.fn() } });
+    await expect(copyTextToClipboard("x")).rejects.toThrow(
       /Clipboard API not available/,
     );
   });

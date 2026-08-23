@@ -20,6 +20,7 @@ import {
   AUDIT_TABLE_PAGE_SIZES,
   type AuditResultsData,
 } from "@/client/features/audit/results/types";
+import type { ExportFormat } from "@/client/features/audit/results/export";
 import {
   countActiveFilters,
   EmptyTableMessage,
@@ -272,16 +273,21 @@ function buildPerformanceColumns({
 export function ExportDropdown({
   onExport,
 }: {
-  onExport: (format: "csv" | "json" | "sheets") => void;
+  onExport: (format: ExportFormat) => void;
 }) {
   return (
     <TableExportMenu
       buttonClassName="btn btn-sm btn-ghost gap-1"
-      menuClassName="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-52"
+      menuClassName="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-56"
       actions={[
         { label: "Export to Sheets", onClick: () => onExport("sheets") },
         { label: "CSV", onClick: () => onExport("csv") },
         { label: "JSON", onClick: () => onExport("json") },
+        { label: "Copy to clipboard", onClick: () => onExport("copy-tsv") },
+        {
+          label: "Copy to clipboard as JSON",
+          onClick: () => onExport("copy-json"),
+        },
       ]}
     />
   );

@@ -4,6 +4,7 @@ import {
   exportIssues,
   exportPages,
   exportPerformance,
+  type ExportFormat,
 } from "@/client/features/audit/results/export";
 import type { AuditResultsData } from "@/client/features/audit/results/types";
 import { isLighthouseFailure } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
@@ -171,7 +172,7 @@ function ResultsHeader({
   hasPerformanceTab: boolean;
   activeTab: string;
   onTabChange: (tab: ResultsTab) => void;
-  onExport: (format: "csv" | "json" | "sheets") => void;
+  onExport: (format: ExportFormat) => void;
 }) {
   const tabs: Array<{ tab: ResultsTab; label: string }> = [
     { tab: "issues", label: `Issues (${issueCount})` },
