@@ -9,13 +9,17 @@ import {
   AppDataTable,
   useAppTable,
 } from "@/client/components/table/AppDataTable";
+import { TablePagination } from "@/client/components/table/TablePagination";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import {
   extractPathname,
   LighthouseScoreBadge,
 } from "@/client/features/audit/shared";
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import {
+  AUDIT_TABLE_PAGE_SIZES,
+  type AuditResultsData,
+} from "@/client/features/audit/results/types";
 import {
   countActiveFilters,
   EmptyTableMessage,
@@ -83,7 +87,21 @@ export function PerformanceTable({
     state: { sorting },
     onSortingChange: setSorting,
     withSorting: true,
+    withPagination: true,
+    initialState: {
+      // Rows are all loaded already; paginating keeps the DOM constant no
+      // matter how many pages an audit measured.
+      pagination: { pageIndex: 0, pageSize: 50 },
+    },
   });
+  const pagination = table.getState().pagination;
+
+  // A narrowed result set can be shorter than the current page offset, which
+  // would leave the user staring at an empty table after filtering.
+  const applyFilters = (nextFilters: PerformanceFilters) => {
+    setFilters(nextFilters);
+    table.setPageIndex(0);
+  };
 
   return (
     <div className="space-y-3">
@@ -97,9 +115,9 @@ export function PerformanceTable({
       {showFilters ? (
         <PerformanceFilterBar
           filters={filters}
-          onChange={setFilters}
+          onChange={applyFilters}
           activeFilterCount={activeFilterCount}
-          onReset={() => setFilters(EMPTY_PERFORMANCE_FILTERS)}
+          onReset={() => applyFilters(EMPTY_PERFORMANCE_FILTERS)}
         />
       ) : null}
       <AppDataTable
@@ -108,6 +126,16 @@ export function PerformanceTable({
         empty={
           <EmptyTableMessage label="No performance results match these filters." />
         }
+      />
+      <TablePagination
+        page={pagination.pageIndex + 1}
+        pageSize={pagination.pageSize}
+        pageSizes={AUDIT_TABLE_PAGE_SIZES}
+        totalCount={filteredRows.length}
+        hasNextPage={table.getCanNextPage()}
+        isLoading={false}
+        onPageChange={(nextPage) => table.setPageIndex(nextPage - 1)}
+        onPageSizeChange={(nextSize) => table.setPageSize(nextSize)}
       />
     </div>
   );

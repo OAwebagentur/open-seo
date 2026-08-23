@@ -9,13 +9,17 @@ import {
   AppDataTable,
   useAppTable,
 } from "@/client/components/table/AppDataTable";
+import { TablePagination } from "@/client/components/table/TablePagination";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import {
   extractHostname,
   extractPathname,
   HttpStatusBadge,
 } from "@/client/features/audit/shared";
-import type { AuditResultsData } from "@/client/features/audit/results/types";
+import {
+  AUDIT_TABLE_PAGE_SIZES,
+  type AuditResultsData,
+} from "@/client/features/audit/results/types";
 import {
   countActiveFilters,
   EmptyTableMessage,
@@ -223,7 +227,21 @@ export function PagesTable({
     state: { sorting },
     onSortingChange: setSorting,
     withSorting: true,
+    withPagination: true,
+    initialState: {
+      // Rows are all loaded already; paginating keeps the DOM constant no
+      // matter how many pages an audit crawled.
+      pagination: { pageIndex: 0, pageSize: 50 },
+    },
   });
+  const pagination = table.getState().pagination;
+
+  // A narrowed result set can be shorter than the current page offset, which
+  // would leave the user staring at an empty table after filtering.
+  const applyFilters = (nextFilters: PagesFilters) => {
+    setFilters(nextFilters);
+    table.setPageIndex(0);
+  };
 
   return (
     <div className="space-y-3">
@@ -237,15 +255,25 @@ export function PagesTable({
       {showFilters ? (
         <PagesFilterBar
           filters={filters}
-          onChange={setFilters}
+          onChange={applyFilters}
           activeFilterCount={activeFilterCount}
-          onReset={() => setFilters(EMPTY_PAGES_FILTERS)}
+          onReset={() => applyFilters(EMPTY_PAGES_FILTERS)}
         />
       ) : null}
       <AppDataTable
         table={table}
         className="table table-sm"
         empty={<EmptyTableMessage label="No pages match these filters." />}
+      />
+      <TablePagination
+        page={pagination.pageIndex + 1}
+        pageSize={pagination.pageSize}
+        pageSizes={AUDIT_TABLE_PAGE_SIZES}
+        totalCount={filteredPages.length}
+        hasNextPage={table.getCanNextPage()}
+        isLoading={false}
+        onPageChange={(nextPage) => table.setPageIndex(nextPage - 1)}
+        onPageSizeChange={(nextSize) => table.setPageSize(nextSize)}
       />
     </div>
   );
