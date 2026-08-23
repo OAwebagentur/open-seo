@@ -16,6 +16,42 @@ import { getLastProjectId } from "@/client/lib/active-project";
 
 const DATAFORSEO_HELP_PATH = "/help/dataforseo-api-key";
 
+// Remembers that the user dismissed the DataForSEO setup modal. Browser-local
+// only, same defensive pattern as `client/lib/active-project.ts` (private
+// windows / blocked site data must never break the app). The dismissal has to
+// be persisted on purpose: the effect below re-evaluates on every route
+// change, so a state-only dismiss would re-open the modal on the next
+// navigation. The setup hint itself is not lost — `SeoApiStatusBanners` keeps
+// showing it.
+const SETUP_MODAL_DISMISSED_KEY = "openseo:dataforseo-setup-modal-dismissed";
+
+function isSetupModalDismissed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(SETUP_MODAL_DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberSetupModalDismissed(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SETUP_MODAL_DISMISSED_KEY, "1");
+  } catch {
+    // Ignore private-mode / disabled-storage failures.
+  }
+}
+
+function clearSetupModalDismissed(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(SETUP_MODAL_DISMISSED_KEY);
+  } catch {
+    // Ignore private-mode / disabled-storage failures.
+  }
+}
+
 export function AuthenticatedAppLayout({
   children,
   projectId,
@@ -80,7 +116,16 @@ export function AuthenticatedAppLayout({
     }
 
     if (!seoApiKeyStatusQuery.isSuccess) return;
-    setShowMissingSeoApiKeyModal(!seoApiKeyStatusQuery.data.configured);
+
+    if (seoApiKeyStatusQuery.data.configured) {
+      // Configured again: forget the dismissal so the hint can return if the
+      // key ever disappears.
+      clearSetupModalDismissed();
+      setShowMissingSeoApiKeyModal(false);
+      return;
+    }
+
+    setShowMissingSeoApiKeyModal(!isSetupModalDismissed());
   }, [
     location.pathname,
     seoApiKeyStatusQuery.data,
@@ -97,6 +142,12 @@ export function AuthenticatedAppLayout({
     isSeoApiKeyConfigured === false &&
     !shouldShowMissingSeoApiKeyModal;
 
+  // Escape and the "Dismiss" button share this path so both stick for good.
+  const dismissMissingSeoApiKeyModal = React.useCallback(() => {
+    rememberSetupModalDismissed();
+    setShowMissingSeoApiKeyModal(false);
+  }, []);
+
   React.useEffect(() => {
     if (!shouldShowMissingSeoApiKeyModal) return;
 
@@ -104,7 +155,7 @@ export function AuthenticatedAppLayout({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setShowMissingSeoApiKeyModal(false);
+        dismissMissingSeoApiKeyModal();
       }
     };
 
@@ -112,7 +163,7 @@ export function AuthenticatedAppLayout({
     return () => {
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [shouldShowMissingSeoApiKeyModal]);
+  }, [dismissMissingSeoApiKeyModal, shouldShowMissingSeoApiKeyModal]);
 
   return (
     <div className="flex h-[100dvh] bg-base-200">
@@ -151,7 +202,7 @@ export function AuthenticatedAppLayout({
       <MissingSeoSetupModal
         ref={setupModalRef}
         isOpen={shouldShowMissingSeoApiKeyModal}
-        onClose={() => setShowMissingSeoApiKeyModal(false)}
+        onClose={dismissMissingSeoApiKeyModal}
       />
 
       <GscReEngagementModal
