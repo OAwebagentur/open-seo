@@ -1,0 +1,7 @@
+# Shell scripts and Dockerfiles are executed inside Linux containers. A Windows
+# checkout with core.autocrlf=true gives them CRLF endings, and the container
+# shell then fails on the very first line ("set: Illegal option -"). Pin them to
+# LF regardless of the checkout platform.
+*.sh text eol=lf
+Dockerfile* text eol=lf
+docker-entrypoint.sh text eol=lf
