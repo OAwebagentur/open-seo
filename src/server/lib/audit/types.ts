@@ -3,7 +3,10 @@
  */
 
 import { z } from "zod";
-import { MIN_AUDIT_PAGES, PAID_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
+import {
+  MAX_AUDIT_PAGES_CEILING,
+  MIN_AUDIT_PAGES,
+} from "@/shared/audit-limits";
 import { jsonCodec } from "@/shared/json";
 
 export type LighthouseStrategy = "auto" | "none";
@@ -27,7 +30,7 @@ const lighthouseStrategySchema = z
   .catch("auto");
 
 const auditConfigSchema = z.object({
-  maxPages: z.number().int().min(MIN_AUDIT_PAGES).max(PAID_MAX_AUDIT_PAGES),
+  maxPages: z.number().int().min(MIN_AUDIT_PAGES).max(MAX_AUDIT_PAGES_CEILING),
   lighthouseStrategy: lighthouseStrategySchema,
 });
 

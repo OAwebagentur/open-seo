@@ -368,6 +368,16 @@ async function getAuditResultsForProject(auditId: string, projectId: string) {
   const [pages, lighthouse, issues] = await Promise.all([
     db.query.auditPages.findMany({
       where: eq(auditPages.auditId, auditId),
+      // The detail JSON blobs (every image on a page, every heading, all
+      // hreflang tags) make up the bulk of an audit_pages row and are never
+      // read by the results UI. On audits with very many pages this decides
+      // whether the response still gets through.
+      columns: {
+        imagesJson: false,
+        headingOrderJson: false,
+        hreflangTagsJson: false,
+        contentHash: false,
+      },
     }),
     db.query.auditLighthouseResults.findMany({
       where: eq(auditLighthouseResults.auditId, auditId),

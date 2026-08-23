@@ -4,6 +4,7 @@ import {
   clampAuditMaxPages,
   getEstimatedAuditCapacity,
 } from "@/server/features/audit/services/audit-capacity";
+import { SELF_HOSTED_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 
 describe("audit capacity helpers", () => {
   it("clamps max pages into the supported range", () => {
@@ -48,12 +49,12 @@ describe("audit capacity helpers", () => {
     expect(freeAudit.total).toBeLessThan(AUDIT_LIMITS.free.maxCapacityUnits);
   });
 
-  it("lifts only the cumulative self-hosted cap", () => {
+  it("lifts the per-audit and cumulative self-hosted caps", () => {
     expect(AUDIT_LIMITS.self_hosted.maxCapacityUnits).toBe(
       Number.POSITIVE_INFINITY,
     );
     expect(AUDIT_LIMITS.self_hosted.maxPagesPerAudit).toBe(
-      AUDIT_LIMITS.paid.maxPagesPerAudit,
+      SELF_HOSTED_MAX_AUDIT_PAGES,
     );
   });
 });

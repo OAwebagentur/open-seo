@@ -1,14 +1,14 @@
 import {
   DEFAULT_AUDIT_PAGES,
   FREE_MAX_AUDIT_PAGES,
+  MAX_AUDIT_PAGES_CEILING,
   MIN_AUDIT_PAGES,
-  PAID_MAX_AUDIT_PAGES,
 } from "@/shared/audit-limits";
 
 export const MIN_PAGES = MIN_AUDIT_PAGES;
 
 export function getMaxPagesLimit(isFreePlan: boolean) {
-  return isFreePlan ? FREE_MAX_AUDIT_PAGES : PAID_MAX_AUDIT_PAGES;
+  return isFreePlan ? FREE_MAX_AUDIT_PAGES : MAX_AUDIT_PAGES_CEILING;
 }
 
 export type LaunchFormValues = {

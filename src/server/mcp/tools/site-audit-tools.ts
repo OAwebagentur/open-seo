@@ -8,6 +8,10 @@ import {
   getIssueDescriptor,
   ISSUE_SEVERITY_ORDER,
 } from "@/shared/audit-issues";
+import {
+  MAX_AUDIT_PAGES_CEILING,
+  MIN_AUDIT_PAGES,
+} from "@/shared/audit-limits";
 import { mcpResponse } from "@/server/mcp/formatters";
 import { buildProjectMeta } from "@/server/mcp/context";
 import {
@@ -49,8 +53,8 @@ const runInputSchema = {
   maxPages: z
     .number()
     .int()
-    .min(10)
-    .max(10_000)
+    .min(MIN_AUDIT_PAGES)
+    .max(MAX_AUDIT_PAGES_CEILING)
     .optional()
     .describe("Page budget for the crawl (default 50)."),
   runLighthouse: z

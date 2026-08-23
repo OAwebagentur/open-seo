@@ -10,6 +10,7 @@ import {
   AUDIT_LIMITS,
   clampAuditMaxPages,
   getEstimatedAuditCapacity,
+  resolveMaxPagesPerAudit,
   type AuditLimitTier,
 } from "@/server/features/audit/services/audit-capacity";
 import { AppError } from "@/server/lib/errors";
@@ -25,6 +26,7 @@ import {
 } from "@/server/lib/audit/url-policy";
 import { reconcileRunningAudit } from "@/server/features/audit/services/auditReconciler";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { PAID_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 
 // Plan-tier limits are the abuse bound in hosted mode: free accounts get one
 // small audit at a time, paid keeps the full limits, and customers with no
@@ -53,8 +55,13 @@ async function startAudit(input: {
   limitTier: AuditLimitTier;
 }) {
   const limits = AUDIT_LIMITS[input.limitTier];
-  const maxPages = clampAuditMaxPages(input.maxPages);
-  if (maxPages > limits.maxPagesPerAudit) {
+  const pageCeiling = await resolveMaxPagesPerAudit(input.limitTier);
+  // Clamp against the highest value this installation accepts, then enforce the
+  // tier bound as an error the way it always was — clamping to the tier limit
+  // instead would silently shrink a request the caller meant literally.
+  const clampCeiling = Math.max(pageCeiling, PAID_MAX_AUDIT_PAGES);
+  const maxPages = clampAuditMaxPages(input.maxPages, clampCeiling);
+  if (maxPages > pageCeiling) {
     throw new AppError("AUDIT_PAGE_LIMIT_EXCEEDED");
   }
 
@@ -62,6 +69,7 @@ async function startAudit(input: {
   const reservation = getEstimatedAuditCapacity({
     maxPages,
     lighthouseStrategy,
+    ceiling: clampCeiling,
   });
 
   const auditId = crypto.randomUUID();
