@@ -75,6 +75,15 @@ Dateien liegen und wandern erneut ins Image.
 
 ## 2026-08-23
 
+- **Audit-Export kann in die Zwischenablage kopieren.** Das Export-Menue der
+  Ergebnistabellen hat zwei neue Eintraege: _Copy to clipboard_ (TSV + `text/html`
+  ueber `copyTableToClipboard`, faellt in Excel/Sheets direkt in Zellen — CSV
+  wuerde in einer Spalte landen) und _Copy to clipboard as JSON_ (exakt die
+  Payload des JSON-Downloads, ueber das neue `copyTextToClipboard`). Kopiert
+  werden immer die **vollstaendigen** Arrays, nie die 50er-Seite der Tabelle;
+  die Tests arbeiten deshalb mit 120-Zeilen-Fixtures. Die JSON-Zeilenaufbauten
+  liegen jetzt in `issuesJson`/`pagesJson`/`performanceJson`, damit Download und
+  Copy nicht auseinanderlaufen; das Inline-Union wurde zu `ExportFormat`.
 - **Eigener Build-Pfad statt GHCR-Image.** `compose.yaml` baut das Image lokal
   (`Dockerfile.selfhost`) statt das Upstream-Image zu ziehen.
 - **Seitenlimit pro Audit fuer self-hosted aufgehoben.** Decke jetzt 1.000.000 Seiten,
