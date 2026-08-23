@@ -5,20 +5,20 @@ Upstream-Stand, alle OA-Anpassungen leben auf dem Branch `oa/features`.
 
 ## Remotes
 
-| Remote   | URL                                          | Regel |
-|----------|----------------------------------------------|-------|
-| `origin` | `https://github.com/every-app/open-seo.git`   | **Upstream. Nur pullen/fetchen — NIE dorthin pushen.** |
-| `oa`     | `https://github.com/OAwebagentur/open-seo.git` | Unser Fork. Hierhin wird gepusht. |
+| Remote   | URL                                            | Regel                                                  |
+| -------- | ---------------------------------------------- | ------------------------------------------------------ |
+| `origin` | `https://github.com/every-app/open-seo.git`    | **Upstream. Nur pullen/fetchen — NIE dorthin pushen.** |
+| `oa`     | `https://github.com/OAwebagentur/open-seo.git` | Unser Fork. Hierhin wird gepusht.                      |
 
 `git push` ohne Remote-Angabe kann auf `origin` zeigen — immer `git push oa <branch>`
 schreiben, bzw. den Upstream der Branches auf `oa` gesetzt lassen (`-u oa`).
 
 ## Branch-Layout
 
-| Branch | Inhalt |
-|---|---|
-| `main` | sauberer Upstream-Stand, keine OA-Commits |
-| `oa/features` | **alle** OA-Anpassungen (Arbeitsbranch, hieraus wird gebaut) |
+| Branch                        | Inhalt                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| `main`                        | sauberer Upstream-Stand, keine OA-Commits                                                        |
+| `oa/features`                 | **alle** OA-Anpassungen (Arbeitsbranch, hieraus wird gebaut)                                     |
 | `feat/audit-table-pagination` | von `main` abgezweigt, enthaelt **nur** den Pagination-Commit als Vorlage fuer einen Upstream-PR |
 
 Der PR-Text dazu liegt in [`docs/pr-pagination.md`](docs/pr-pagination.md)
