@@ -16,6 +16,7 @@ const captureClientEvent = vi.fn(
 );
 const toastSuccess = vi.fn((_message: string) => {});
 const toastError = vi.fn((_message: string) => {});
+const toastWarning = vi.fn((_message: string) => {});
 
 vi.mock("@/client/lib/clipboard", () => ({
   copyTableToClipboard,
@@ -28,10 +29,10 @@ vi.mock("@/client/lib/csv", async (importOriginal) => ({
 }));
 vi.mock("@/client/lib/posthog", () => ({ captureClientEvent }));
 vi.mock("sonner", () => ({
-  toast: { success: toastSuccess, error: toastError },
+  toast: { success: toastSuccess, error: toastError, warning: toastWarning },
 }));
 
-const { exportIssues, exportPages, exportPerformance } =
+const { exportIssues, exportPages, exportPerformance, MAX_CLIPBOARD_ROWS } =
   await import("@/client/features/audit/results/export");
 
 type Page = AuditResultsData["pages"][number];
@@ -199,6 +200,59 @@ describe("copy-json", () => {
     exportPerformance([], pages, "copy-json");
     await vi.waitFor(() => expect(toastError).toHaveBeenCalled());
     expect(copyTextToClipboard).not.toHaveBeenCalled();
+  });
+});
+
+describe("clipboard row limit", () => {
+  // Der Guard liest nur die Laenge, deshalb reicht dieselbe Zeile n-mal.
+  const overLimit = Array.from<Page>({ length: MAX_CLIPBOARD_ROWS + 1 }).fill(
+    pages[0],
+  );
+
+  it("refuses to copy more rows than the limit instead of truncating", () => {
+    exportPages(overLimit, "copy-tsv");
+    exportPages(overLimit, "copy-json");
+
+    expect(copyTableToClipboard).not.toHaveBeenCalled();
+    expect(copyTextToClipboard).not.toHaveBeenCalled();
+    expect(toastError).toHaveBeenCalledTimes(2);
+    expect(toastError).toHaveBeenLastCalledWith(
+      `Too many rows to copy: ${(MAX_CLIPBOARD_ROWS + 1).toLocaleString()} rows exceeds the clipboard limit of ${MAX_CLIPBOARD_ROWS.toLocaleString()} rows. Download the CSV or JSON export instead.`,
+    );
+  });
+
+  it("leaves the download unlimited", () => {
+    exportPages(overLimit, "csv");
+    expect(downloadCsv).toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+  });
+});
+
+describe("unreadable issue details", () => {
+  it("exports the raw text for the broken row and keeps the rest intact", async () => {
+    const broken = [
+      makeIssue(0),
+      { ...makeIssue(1), detailsJson: "{not json" } as Issue,
+      makeIssue(2),
+    ];
+
+    exportIssues(broken, "copy-json");
+    await vi.waitFor(() => expect(copyTextToClipboard).toHaveBeenCalled());
+
+    const copied = JSON.parse(copyTextToClipboard.mock.calls[0][0]) as {
+      url: string;
+      details: unknown;
+    }[];
+    expect(copied).toHaveLength(3);
+    expect(copied[0].details).toEqual({ index: 0 });
+    expect(copied[1].details).toBe("{not json");
+    expect(copied[2]).toMatchObject({
+      url: "https://example.com/page-2",
+      details: { index: 2 },
+    });
+    expect(toastWarning).toHaveBeenCalledWith(
+      "1 row had details that are not valid JSON; the raw text was exported instead.",
+    );
   });
 });
 

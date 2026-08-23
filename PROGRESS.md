@@ -75,6 +75,18 @@ Dateien liegen und wandern erneut ins Image.
 
 ## 2026-08-23
 
+- **Zwei Defekte im Clipboard-Export behoben.** (1) `MAX_CLIPBOARD_ROWS` (50.000)
+  deckelt jetzt _copy-tsv_ und _copy-json_: Der Kopier-Pfad baut TSV, HTML bzw. die
+  JSON-Payload synchron im Main-Thread auf, und self-hosted sind Audits mit bis zu
+  1.000.000 Seiten erlaubt — darueber fror der Tab beim Klick ein oder das Kopieren
+  schlug still fehl. Ueber dem Limit wird nichts gekappt und nichts halb kopiert,
+  sondern ein Fehler-Toast mit Zeilenzahl, Limit und dem Verweis auf den CSV-/JSON-
+  Download gezeigt; die Downloads selbst bleiben unbegrenzt. (2) `JSON.parse` auf
+  `issue.detailsJson` lief in `issuesJson` ohne `try/catch` — ein kaputter Datensatz
+  riss den ganzen Export mit sich (Download **und** Copy), sichtbar nur als
+  Konsolenfehler. Jetzt faellt genau die betroffene Zeile auf ihren Rohtext zurueck,
+  der Rest laeuft durch, und ein Warn-Toast nennt die Anzahl der nicht lesbaren Zeilen.
+
 - **Audit-Export kann in die Zwischenablage kopieren.** Das Export-Menue der
   Ergebnistabellen hat zwei neue Eintraege: _Copy to clipboard_ (TSV + `text/html`
   ueber `copyTableToClipboard`, faellt in Excel/Sheets direkt in Zellen — CSV

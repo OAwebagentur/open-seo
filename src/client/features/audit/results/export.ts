@@ -18,8 +18,40 @@ import { captureClientEvent } from "@/client/lib/posthog";
  */
 export type ExportFormat = "csv" | "json" | "sheets" | "copy-tsv" | "copy-json";
 
+/**
+ * Der Kopier-Pfad baut die komplette Nutzlast synchron im Main-Thread auf:
+ * `copyTableToClipboard` erzeugt TSV *und* HTML am Stueck, `copy-json`
+ * serialisiert den ganzen Datensatz. Self-hosted sind Audits mit bis zu
+ * 1.000.000 Seiten erlaubt — ohne Deckel friert der Tab beim Klick ein oder
+ * das Kopieren schlaegt still fehl. Der Download-Pfad bleibt unbegrenzt.
+ */
+export const MAX_CLIPBOARD_ROWS = 50_000;
+
 function formatRowCount(count: number): string {
   return `${count.toLocaleString()} row${count === 1 ? "" : "s"}`;
+}
+
+// Bewusst nicht kappen: eine halb kopierte Tabelle sieht in Excel aus wie das
+// ganze Audit. Lieber gar nichts kopieren und auf den Download verweisen.
+function exceedsClipboardLimit(
+  format: ExportFormat,
+  rowCount: number,
+): boolean {
+  if (format !== "copy-tsv" && format !== "copy-json") return false;
+  if (rowCount <= MAX_CLIPBOARD_ROWS) return false;
+  toast.error(
+    `Too many rows to copy: ${formatRowCount(rowCount)} exceeds the clipboard limit of ${MAX_CLIPBOARD_ROWS.toLocaleString()} rows. Download the CSV or JSON export instead.`,
+  );
+  return true;
+}
+
+// Kein stiller Fehlschlag: kaputte Zeilen laufen mit ihrem Rohtext durch, der
+// Nutzer erfaehrt aber, wie viele betroffen sind.
+function reportUnparsedDetails(count: number) {
+  if (count === 0) return;
+  toast.warning(
+    `${formatRowCount(count)} had details that are not valid JSON; the raw text was exported instead.`,
+  );
 }
 
 async function copyRowsToClipboard(
@@ -80,28 +112,42 @@ function issuesRows(issues: AuditResultsData["issues"]): CsvValue[][] {
 }
 
 function issuesJson(issues: AuditResultsData["issues"]) {
-  return issues.map((issue) => {
+  let unparsedCount = 0;
+  const rows = issues.map((issue) => {
     const descriptor = getIssueDescriptor(issue.issueType);
+    let details: unknown = null;
+    if (issue.detailsJson) {
+      try {
+        details = JSON.parse(issue.detailsJson);
+      } catch {
+        // Ein kaputter Datensatz darf den ganzen Export nicht killen.
+        details = issue.detailsJson;
+        unparsedCount += 1;
+      }
+    }
     return {
       severity: issue.severity,
       issueType: issue.issueType,
       issue: descriptor?.title ?? issue.issueType,
       url: issue.pageUrl,
-      details: issue.detailsJson
-        ? (JSON.parse(issue.detailsJson) as unknown)
-        : null,
+      details,
       howToFix: descriptor?.howToFix ?? null,
     };
   });
+  return { rows, unparsedCount };
 }
 
 export function exportIssues(
   issues: AuditResultsData["issues"],
   format: ExportFormat,
 ) {
+  if (exceedsClipboardLimit(format, issues.length)) return;
+
   if (format === "json") {
+    const { rows, unparsedCount } = issuesJson(issues);
+    reportUnparsedDetails(unparsedCount);
     downloadFile(
-      JSON.stringify(issuesJson(issues), null, 2),
+      JSON.stringify(rows, null, 2),
       "audit-issues.json",
       "application/json",
     );
@@ -109,7 +155,9 @@ export function exportIssues(
   }
 
   if (format === "copy-json") {
-    void copyJsonToClipboard(issuesJson(issues), "audit_issues");
+    const { rows, unparsedCount } = issuesJson(issues);
+    reportUnparsedDetails(unparsedCount);
+    void copyJsonToClipboard(rows, "audit_issues");
     return;
   }
 
@@ -227,6 +275,8 @@ export function exportPages(
   pages: AuditResultsData["pages"],
   format: ExportFormat,
 ) {
+  if (exceedsClipboardLimit(format, pages.length)) return;
+
   if (format === "json") {
     downloadFile(
       JSON.stringify(pagesJson(pages), null, 2),
@@ -263,6 +313,8 @@ export function exportPerformance(
   pages: AuditResultsData["pages"],
   format: ExportFormat,
 ) {
+  if (exceedsClipboardLimit(format, lighthouse.length)) return;
+
   if (format === "json") {
     downloadFile(
       JSON.stringify(performanceJson(lighthouse, pages), null, 2),
