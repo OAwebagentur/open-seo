@@ -1,6 +1,12 @@
 services:
   open-seo:
-    image: ${OPEN_SEO_IMAGE:-ghcr.io/every-app/open-seo:latest}
+    # OA: aus dem LOKALEN Checkout bauen statt das Upstream-GHCR-Image zu ziehen,
+    # damit unsere Anpassungen (Branch oa/features) wirklich laufen.
+    # Rueckweg zum Upstream-Image: OPEN_SEO_IMAGE setzen und build: auskommentieren.
+    build:
+      context: .
+      dockerfile: Dockerfile.selfhost
+    image: ${OPEN_SEO_IMAGE:-oa/open-seo:local}
     restart: unless-stopped
     # Forward EVERY .env value into the container. The explicit `environment:`
     # list below still wins for the values it names — without this, any .env
@@ -30,6 +36,9 @@ services:
       # Optional: AI features (SAM, the in-app SEO agent)
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-}
+      # Optional: Obergrenze Seiten pro Site-Audit im Self-Hosting.
+      # Leer = Self-Host-Decke (1.000.000) statt der gehosteten 10.000.
+      - OPENSEO_MAX_AUDIT_PAGES=${OPENSEO_MAX_AUDIT_PAGES:-}
       - VITE_SHOW_DEVTOOLS=false
     ports:
       - "127.0.0.1:${PORT:-3001}:${PORT:-3001}"
