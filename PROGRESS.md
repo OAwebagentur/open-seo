@@ -73,6 +73,32 @@ Dateien liegen und wandern erneut ins Image.
 
 ## Aenderungen auf oa/features
 
+## 2026-08-24
+
+- **seo.local eingerichtet + oa/features gepusht, damit lokal wirklich die
+  neueste Version laeuft.** `.env`: `DATAFORSEO_API_KEY` gesetzt (Basic-Auth
+  gegen `api.dataforseo.com` mit `curl -H Authorization: Basic ...` belegt,
+  HTTP 200), `ALLOWED_HOST=seo.local` ergaenzt (Vite blockt sonst unbekannte
+  Hosts). Port-80-Mapping auf `127.0.0.2` **nicht** moeglich — Twenty CRM haelt
+  `0.0.0.0:80` und deckt damit jede lokale Adresse ab; stattdessen Fallback
+  `127.0.0.1 seo.local` in die Windows-`hosts` — **das Anhaengen scheiterte
+  ohne Adminrechte** ("Zugriff verweigert"), offener Punkt fuer onur:
+  Zeile `127.0.0.1 seo.local` manuell in
+  `C:\Windows\System32\drivers\etc\hosts` eintragen, danach `ipconfig /flushdns`.
+  Aufruf bis dahin ueber `http://localhost:3001/` bzw. `http://127.0.0.1:3001/`.
+- **4 lokale Commits nach `oa/features` gepusht** (`6cbec7e..5af705a`, inkl.
+  `8c21ad9` Audit-Limit + `eebc17b`/`5af705a` Clipboard-Export) — vorher lagen
+  sie nur lokal, der Container zeigte sie nicht.
+- **Container aus dem aktuellen `oa/features`-Checkout neu gebaut**
+  (`docker compose up -d --build`, `oa/open-seo:local`). Beide Features im
+  laufenden Container belegt: `src/shared/audit-limits.ts` mit
+  `SELF_HOSTED_MAX_AUDIT_PAGES = 1_000_000` im Image vorhanden, Clipboard-
+  Export-Code in mehreren gebauten Server-Bundles (`grep lipboard`) gefunden.
+  `restart: unless-stopped` gesetzt, ueberlebt Docker-/Host-Neustart.
+- Vorher gegengeprueft: `pnpm exec tsc --noEmit` fehlerfrei, `pnpm vitest run
+  src/server/features/audit` 6/6 gruen. `http://crm.local/` weiterhin HTTP 200
+  (Twenty unangetastet).
+
 ## 2026-08-23
 
 - **Zwei Defekte im Clipboard-Export behoben.** (1) `MAX_CLIPBOARD_ROWS` (50.000)
